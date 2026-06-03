@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Finalytics — Interactive Sandbox (Business Owner)</title>
+
+<!--
+  ============================================================================
+  FINALYTICS — INTERACTIVE HTML SANDBOX PROTOTYPE  (Business Owner mode)
+  ----------------------------------------------------------------------------
+  This is a DEMO / sandbox. All data is mock. No backend, no Firebase.
+  Built to mirror the real React app's look & every owner-facing action so a
+  client can click around and "feel" the product. Single self-contained file.
+  Just open it in a browser. (CDNs load Tailwind / Lucide icons / ApexCharts.)
+  ============================================================================
+-->
+
+<!-- Tailwind (Play CDN) so the exact utility classes from the real app render -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'sans-serif'] },
+      }
+    }
+  }
+</script>
+
+<!-- Inter font + icons + charts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Inter', sans-serif; }
+  /* The real app uses body { zoom: 80% } */
+  #app-zoom { zoom: 0.9; }
+
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+  /* Animations copied from the real index.css */
+  .fade-in-content { animation: fadeInContent .5s ease-out forwards; }
+  @keyframes fadeInContent { from { opacity: 0; transform: translateY(4px);} to { opacity:1; transform: translateY(0);} }
+  .animate-slide-up { animation: slideUp .3s ease-out forwards; }
+  @keyframes slideUp { from { opacity:0; transform: translateY(20px);} to { opacity:1; transform: translateY(0);} }
+  .animate-page-enter { animation: pageEnter .5s ease-in-out forwards; }
+  @keyframes pageEnter { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Hint dots — pulsing indigo marker on key actions */
+  .hint-dot { position:absolute; top:-5px; right:-5px; width:12px; height:12px; pointer-events:none; z-index:5; }
+  .hint-dot::before { content:''; position:absolute; inset:0; border-radius:9999px; background:#6366f1; opacity:.75; animation: hintping 1.4s cubic-bezier(0,0,.2,1) infinite; }
+  .hint-dot::after  { content:''; position:absolute; inset:2px; border-radius:9999px; background:#4f46e5; }
+  @keyframes hintping { 75%,100% { transform: scale(2.4); opacity:0; } }
+  body.hints-off .hint-dot { display:none; }
+
+  .modal-backdrop { background: rgba(17,24,39,.55); backdrop-filter: blur(2px); }
+  [x-cloak] { display: none !important; }
+
+  /* Wrapped — only the card animates on the static black backdrop */
+  .wrapped-card { animation: wcardIn .5s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes wcardIn { 0% { opacity:0; transform: translateY(28px) scale(.94); } 100% { opacity:1; transform: translateY(0) scale(1); } }
+  .wnav { position:absolute; top:50%; transform:translateY(-50%); padding:.7rem; border-radius:9999px; color:#fff; background:rgba(255,255,255,.08); transition:background .2s; z-index:20; }
+  .wnav:hover { background:rgba(255,255,255,.2); }
+</style>
+</head>
+
+<body class="bg-gray-50 text-gray-900">
+
+<!-- ============================ AUTH: LOGIN ============================ -->
+<div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 px-4">
+  <div class="w-full max-w-md">
+    <div class="flex items-center justify-center gap-3 mb-8">
+      <div class="w-11 h-11 bg-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
+        <i data-lucide="pie-chart" class="text-white" style="width:24px;height:24px"></i>
+      </div>
+      <span class="font-bold text-3xl tracking-tight text-indigo-950">Finalytics</span>
+    </div>
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+      <h1 class="text-2xl font-bold text-gray-900" id="login-title">Welcome back</h1>
+      <p class="text-gray-500 mt-1" id="login-sub">Sign in to your dashboard</p>
+      <div class="mt-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+          <input type="email" value="owner@kopinusantara.id" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="name@company.com" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input type="password" value="demodemo" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="••••••••" />
+        </div>
+        <button onclick="doLogin()" class="relative w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors shadow-lg shadow-indigo-500/20">
+          <span id="login-btn-text">Sign In</span>
+          <span class="hint-dot"></span>
+        </button>
+        <button onclick="toggleAuthMode()" class="w-full text-center text-sm text-indigo-600 hover:text-indigo-700">
+          <span id="login-toggle">Don't have an account? Sign up</span>
+        </button>
+      </div>
+    </div>
+    <p class="text-center text-xs text-gray-400 mt-6">Sandbox demo · mock data · no real account needed — just click Sign In</p>
+  </div>
+</div>
+
+<!-- ============================ ONBOARDING ============================ -->
+<div id="onboarding-screen" class="hidden min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 px-4">
+  <div class="w-full max-w-lg">
+    <!-- Steps indicator -->
+    <div class="flex items-center justify-center gap-4 mb-8">
+      <div class="flex items-center gap-2">
+        <div id="ob-step1-dot" class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center"><i data-lucide="building-2" style="width:18px;height:18px"></i></div>
+        <span class="font-semibold text-gray-700">Brand</span>
+      </div>
+      <i data-lucide="arrow-right" class="text-gray-300" style="width:20px;height:20px"></i>
+      <div class="flex items-center gap-2">
+        <div id="ob-step2-dot" class="w-9 h-9 rounded-full bg-gray-200 text-gray-400 flex items-center justify-center"><i data-lucide="map-pin" style="width:18px;height:18px"></i></div>
+        <span class="font-semibold text-gray-400" id="ob-step2-label">Branch</span>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+      <!-- Step 1 -->
+      <div id="ob-step1">
+        <h2 class="text-2xl font-bold text-gray-900">Create Your Brand</h2>
+        <p class="text-gray-500 mt-1">What's your business called?</p>
+        <div class="mt-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Brand Name *</label>
+            <input id="ob-brand-name" value="Kopi Nusantara" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="e.g. My Coffee Shop" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+            <textarea rows="3" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="Brief description of your brand">Specialty coffee chain across Indonesia</textarea>
+          </div>
+          <button onclick="obNext()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors">Next: Add a Branch →</button>
+        </div>
+      </div>
+      <!-- Step 2 -->
+      <div id="ob-step2-form" class="hidden">
+        <h2 class="text-2xl font-bold text-gray-900">Add Your First Branch</h2>
+        <p class="text-gray-500 mt-1">Where is <span id="ob-brand-echo" class="font-semibold text-indigo-600">Kopi Nusantara</span> located?</p>
+        <div class="mt-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Branch Name *</label>
+            <input id="ob-branch-name" value="Jakarta Pusat" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="e.g. Main Branch" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Address (optional)</label>
+            <input value="Jl. M.H. Thamrin No.1, Jakarta" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500" placeholder="e.g. 123 Main Street" />
+          </div>
+          <button onclick="obComplete()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition-colors">✓ Complete Setup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ APP SHELL ============================ -->
+<div id="app-zoom" class="hidden">
+<div class="flex min-h-screen bg-gray-50 font-sans">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 bg-indigo-950 text-white fixed h-full transition-all duration-300 z-20 shadow-xl flex flex-col">
+    <div class="h-16 flex items-center px-6 border-b border-indigo-900/50">
+      <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
+        <i data-lucide="pie-chart" class="text-white" style="width:20px;height:20px"></i>
+      </div>
+      <span class="sb-label ml-3 font-bold text-xl tracking-tight">Finalytics</span>
+    </div>
+
+    <!-- Brand & Branch -->
+    <div class="px-3 mt-4">
+      <button onclick="openBrandBranch()" class="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 hover:from-indigo-600/30 hover:to-purple-600/30 transition-all">
+        <i data-lucide="building-2" class="text-indigo-300" style="width:20px;height:20px"></i>
+        <div class="sb-label flex-1 text-left">
+          <p class="text-xs text-indigo-300 font-medium">Brand & Branch</p>
+          <p class="text-sm text-white font-semibold truncate" id="sb-brandbranch">Kopi Nusantara → Jakarta Pusat</p>
+        </div>
+        <i data-lucide="chevrons-up-down" class="sb-label text-indigo-400" style="width:14px;height:14px"></i>
+        <span class="hint-dot"></span>
+      </button>
+    </div>
+
+    <!-- Nav -->
+    <nav class="mt-4 px-3 space-y-2 flex-1 overflow-y-auto custom-scrollbar" id="nav-root">
+      <!-- nav links injected by JS -->
+    </nav>
+
+    <!-- Footer -->
+    <div class="p-4 border-t border-indigo-900/50 space-y-2" id="nav-footer"></div>
+  </aside>
+
+  <!-- Main wrapper -->
+  <div id="main-wrap" class="flex-1 flex flex-col transition-all duration-300 ml-64">
+    <!-- Header -->
+    <header class="h-16 bg-white shadow-sm flex items-center justify-between px-8 z-10 relative">
+      <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-100 rounded-lg text-gray-600"><i data-lucide="menu" style="width:20px;height:20px"></i></button>
+      <div class="flex items-center gap-4">
+        <button onclick="toggleHints()" id="hints-btn" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm text-indigo-600 hover:bg-indigo-100 transition-colors">
+          <i data-lucide="sparkles" style="width:14px;height:14px"></i><span>Hints: On</span>
+        </button>
+        <button onclick="openBrandBranch()" class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-full text-sm text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition-colors">
+          <i data-lucide="building-2" class="text-indigo-500" style="width:14px;height:14px"></i>
+          <span class="font-medium" id="hdr-brandbranch">Kopi Nusantara → Jakarta Pusat</span>
+          <i data-lucide="chevrons-up-down" class="text-gray-400" style="width:12px;height:12px"></i>
+        </button>
+        <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold border-2 border-white shadow-sm">F</div>
+      </div>
+    </header>
+
+    <!-- Page content -->
+    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50/50">
+      <div id="screen-content"></div>
+    </main>
+  </div>
+</div>
+</div>
+
+<!-- Roots for overlays -->
+<div id="modal-root"></div>
+<div id="toast-root" class="fixed bottom-6 right-6 z-50 space-y-3 flex flex-col items-end"></div>
+<div id="wrapped-root"></div>
+
+<script>
+/* ============================================================================
+   MOCK DATA
+   ========================================================================== */
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function curve(base, points, jitter, peakIdx){
+  // deterministic pseudo-data generator (no Math.random — stable across reloads)
+  const out=[];
+  for(let i=0;i<points;i++){
+    const wave = Math.sin((i/points)*Math.PI*2)*0.18 + Math.sin((i/3))*0.06;
+    const peak = peakIdx!=null ? Math.exp(-Math.pow(i-peakIdx,2)/ (points*0.6)) * 0.5 : 0;
+    out.push(Math.round(base*(1+wave+peak) + (i%5)*jitter));
+  }
+  return out;
+}
+
+const DATA = {
+  brands: [
+    {
+      id:'kopi', name:'Kopi Nusantara', desc:'Specialty coffee chain across Indonesia',
+      profile:{ sector:'F&B', region:'Jakarta', size:'Small (11-50)', model:'B2C', target:'Urban professionals & students, 18–40' },
+      branches: ['jkt','bali']
+    },
+    {
+      id:'roti', name:'Roti Bahagia', desc:'Artisan bakery',
+      profile:{ sector:'F&B', region:'Bandung', size:'Micro (1-10)', model:'B2C', target:'Families & office catering' },
+      branches: ['bdg']
+    }
+  ],
+  branches: {
+    jkt: { id:'jkt', brand:'kopi', name:'Jakarta Pusat', address:'Jl. M.H. Thamrin No.1, Jakarta', verified:true,
+      ds:{
+        revenue: 1_842_500_000, transactions: 128_400, avgTicket: 14_350,
+        bestDay:{date:'Sat, 14 Dec', amount: 12_840_000},
+        monthlyRevenue: [128,134,141,138,152,149,161,168,159,172,181,168].map(v=>v*1e6),
+        daily: curve(5_000_000, 60, 120000, 42),
+        hourly: [2,1,1,0,0,1,4,9,18,26,31,38,44,40,33,29,34,41,47,38,27,16,9,4].map(v=>v*1e6/10),
+        weekly: [148,139,144,158,176,192,131].map(v=>v*1e6/8),
+        topProducts:[
+          {name:'Es Kopi Susu Gula Aren', qty:21450, rev:268_125_000},
+          {name:'Americano', qty:14200, rev:142_000_000},
+          {name:'Cappuccino', qty:11890, rev:148_625_000},
+          {name:'Butter Croissant', qty:9640, rev:96_400_000},
+          {name:'Matcha Latte', qty:8120, rev:121_800_000},
+        ],
+        categories:[
+          {name:'Coffee', rev:842_000_000},
+          {name:'Non-Coffee', rev:421_000_000},
+          {name:'Pastry', rev:318_500_000},
+          {name:'Food', rev:184_000_000},
+          {name:'Merchandise', rev:77_000_000},
+        ],
+        pnl:{ revenue:1_842_500_000, cogs:663_300_000, opex:744_900_000, other:91_200_000 }
+      }
+    },
+    bali: { id:'bali', brand:'kopi', name:'Bali Ubud', address:'Jl. Raya Ubud No.88, Gianyar', verified:true,
+      ds:{
+        revenue: 1_124_800_000, transactions: 71_200, avgTicket: 15_800,
+        bestDay:{date:'Sun, 29 Jun', amount: 9_240_000},
+        monthlyRevenue: [82,88,95,101,98,112,121,118,109,99,91,110].map(v=>v*1e6),
+        daily: curve(3_100_000, 60, 90000, 30),
+        hourly: [1,0,0,0,1,2,5,11,16,21,25,29,33,31,28,30,36,42,49,44,33,22,12,5].map(v=>v*1e6/12),
+        weekly: [121,118,126,132,151,168,148].map(v=>v*1e6/9),
+        topProducts:[
+          {name:'Cold Brew', qty:13200, rev:184_800_000},
+          {name:'Es Kopi Susu Gula Aren', qty:12100, rev:151_250_000},
+          {name:'Coconut Latte', qty:8900, rev:142_400_000},
+          {name:'Avocado Toast', qty:6400, rev:128_000_000},
+          {name:'Banana Bread', qty:5800, rev:58_000_000},
+        ],
+        categories:[
+          {name:'Coffee', rev:512_000_000},
+          {name:'Non-Coffee', rev:286_000_000},
+          {name:'Food', rev:201_800_000},
+          {name:'Pastry', rev:84_000_000},
+          {name:'Merchandise', rev:41_000_000},
+        ],
+        pnl:{ revenue:1_124_800_000, cogs:438_700_000, opex:472_400_000, other:58_900_000 }
+      }
+    },
+    bdg: { id:'bdg', brand:'roti', name:'Bandung Dago', address:'Jl. Ir. H. Juanda No.20, Bandung', verified:true,
+      ds:{
+        revenue: 642_300_000, transactions: 48_900, avgTicket: 13_130,
+        bestDay:{date:'Sat, 21 Dec', amount: 5_120_000},
+        monthlyRevenue: [44,46,48,51,53,55,58,57,52,50,48,80].map(v=>v*1e6),
+        daily: curve(1_800_000, 60, 70000, 50),
+        hourly: [0,0,0,1,3,8,14,19,22,24,21,18,15,14,17,21,26,29,24,16,9,5,2,1].map(v=>v*1e6/14),
+        weekly: [88,84,90,96,108,126,118].map(v=>v*1e6/11),
+        topProducts:[
+          {name:'Roti Sobek Cokelat', qty:9800, rev:78_400_000},
+          {name:'Croissant Almond', qty:6200, rev:74_400_000},
+          {name:'Sourdough Loaf', qty:4100, rev:82_000_000},
+          {name:'Donat Gula', qty:11200, rev:56_000_000},
+          {name:'Cinnamon Roll', qty:3900, rev:46_800_000},
+        ],
+        categories:[
+          {name:'Bread', rev:286_000_000},
+          {name:'Pastry', rev:198_000_000},
+          {name:'Cake', rev:102_300_000},
+          {name:'Beverage', rev:56_000_000},
+        ],
+        pnl:{ revenue:642_300_000, cogs:288_900_000, opex:241_200_000, other:32_100_000 }
+      }
+    }
+  },
+  years: [2024, 2025, 2026]
+};
+
+/* ============================================================================
+   APP STATE + HELPERS
+   ========================================================================== */
+const state = {
+  brandId: 'kopi',
+  branchId: 'jkt',
+  year: 2025,
+  period: 'Monthly',
+  sidebarOpen: true,
+  authMode: 'signin',
+  obStep: 1,
+  integrations: { moka:false, esb_jkt:false, esb_bali:false }, // connected flags
+};
+
+const fmtIDR = (v) => new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(v||0);
+const fmtCompact = (v) => 'Rp '+new Intl.NumberFormat('id-ID',{notation:'compact',compactDisplay:'short',maximumFractionDigits:1}).format(v||0);
+const fmtNum = (v) => new Intl.NumberFormat('id-ID').format(v||0);
+const fmtPct = (v) => (v>=0?'':'-')+Math.abs(v).toFixed(1)+'%';
+
+function brand(){ return DATA.brands.find(b=>b.id===state.brandId); }
+function branch(){ return DATA.branches[state.branchId]; }
+function ds(){ return branch().ds; }
+function icons(){ if(window.lucide) lucide.createIcons(); }
+
+function pnlDerived(p){
+  const gross = p.revenue - p.cogs;
+  const operating = gross - p.opex;
+  const net = operating - p.other;
+  return {
+    ...p, gross, operating, net,
+    grossMargin: gross/p.revenue*100,
+    opMargin: operating/p.revenue*100,
+    netMargin: net/p.revenue*100,
+  };
+}
+
+/* growth vs a mock "previous period" (derived deterministically) */
+function growth(seed){ const g = ((seed%17)-6); return g; }
+
+/* ============================================================================
+   TOASTS  (mirrors ProgressToast slide-up style)
+   ========================================================================== */
+function showToast(msg, type='success'){
+  const root = document.getElementById('toast-root');
+  const colors = type==='success' ? 'border-emerald-200' : type==='info' ? 'border-indigo-200':'border-amber-200';
+  const icon = type==='success' ? 'check-circle-2' : type==='info' ? 'info' : 'alert-triangle';
+  const iconColor = type==='success' ? 'text-emerald-500' : type==='info' ? 'text-indigo-500' : 'text-amber-500';
+  const t = document.createElement('div');
+  t.className = `animate-slide-up bg-white rounded-xl shadow-xl border ${colors} px-4 py-3 flex items-center gap-3 max-w-sm`;
+  t.innerHTML = `<i data-lucide="${icon}" class="${iconColor}" style="width:20px;height:20px"></i><span class="text-sm text-gray-700 font-medium">${msg}</span>`;
+  root.appendChild(t); icons();
+  setTimeout(()=>{ t.style.transition='opacity .4s, transform .4s'; t.style.opacity='0'; t.style.transform='translateY(10px)'; setTimeout(()=>t.remove(),400); }, 3200);
+}
+
+/* ============================================================================
+   AUTH FLOW
+   ========================================================================== */
+function toggleAuthMode(){
+  state.authMode = state.authMode==='signin' ? 'signup':'signin';
+  const signup = state.authMode==='signup';
+  document.getElementById('login-title').textContent = signup ? 'Create your account' : 'Welcome back';
+  document.getElementById('login-sub').textContent = signup ? 'Start your 14-day free trial' : 'Sign in to your dashboard';
+  document.getElementById('login-btn-text').textContent = signup ? 'Sign Up' : 'Sign In';
+  document.getElementById('login-toggle').textContent = signup ? 'Already have an account? Sign in' : "Don't have an account? Sign up";
+}
+function doLogin(){
+  document.getElementById('login-screen').classList.add('hidden');
+  if(state.authMode==='signup'){
+    const ob = document.getElementById('onboarding-screen');
+    ob.classList.remove('hidden'); ob.classList.add('flex'); icons();
+  } else {
+    enterApp();
+  }
+}
+function obNext(){
+  const name = document.getElementById('ob-brand-name').value || 'My Brand';
+  document.getElementById('ob-brand-echo').textContent = name;
+  document.getElementById('ob-step1').classList.add('hidden');
+  document.getElementById('ob-step2-form').classList.remove('hidden');
+  document.getElementById('ob-step1-dot').innerHTML = '<i data-lucide="check" style="width:18px;height:18px"></i>';
+  document.getElementById('ob-step1-dot').className = 'w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center';
+  document.getElementById('ob-step2-dot').className = 'w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center';
+  document.getElementById('ob-step2-label').className = 'font-semibold text-gray-700';
+  icons();
+}
+function obComplete(){
+  document.getElementById('onboarding-screen').classList.add('hidden');
+  showAfterEnter = ()=> showToast('Setup complete — welcome to Finalytics!','success');
+  enterApp();
+}
+let showAfterEnter = null;
+function enterApp(){
+  document.getElementById('app-zoom').classList.remove('hidden');
+  renderNav();
+  if(!location.hash) location.hash = '#/dashboard';
+  else route();
+  icons();
+  if(showAfterEnter){ setTimeout(showAfterEnter, 600); showAfterEnter=null; }
+}
+function logout(){
+  document.getElementById('app-zoom').classList.add('hidden');
+  document.getElementById('login-screen').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+/* ============================================================================
+   SIDEBAR / NAV / SHELL
+   ========================================================================== */
+const NAV = [
+  {id:'dashboard', label:'Dashboard', icon:'layout-dashboard'},
+  {id:'data-hub', label:'Data Hub', icon:'database', hint:true},
+  {id:'investor-report', label:'Investor Report', icon:'file-text'},
+  {id:'investor-connect', label:'Investor Connect', icon:'handshake', grad:'from-indigo-600 to-purple-600'},
+  {id:'wrapped', label:'Wrapped', icon:'sparkles', grad:'from-purple-600 to-pink-600', hint:true},
+];
+const ANALYSIS = [
+  {id:'analysis-finance', label:'Finance', icon:'trending-up'},
+  {id:'analysis-sales', label:'Sales', icon:'wallet'},
+  {id:'analysis-product', label:'Product & Channel', icon:'shopping-bag'},
+  {id:'analysis-time', label:'Time Comparison', icon:'clock'},
+  {id:'analysis-branch', label:'Branch Comparison', icon:'git-compare'},
+];
+
+function renderNav(){
+  const cur = (location.hash||'#/dashboard').replace('#/','');
+  const root = document.getElementById('nav-root');
+  const link = (n)=>{
+    const active = cur===n.id;
+    const activeCls = n.grad ? `bg-gradient-to-r ${n.grad} text-white shadow-lg shadow-indigo-500/30` : 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30';
+    return `<a href="#/${n.id}" class="relative flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${active?activeCls:'text-indigo-100 hover:bg-indigo-900 hover:text-white'}">
+      <i data-lucide="${n.icon}" style="width:20px;height:20px"></i>
+      <span class="sb-label font-medium">${n.label}</span>
+      ${n.hint?'<span class="hint-dot"></span>':''}
+    </a>`;
+  };
+  let html = NAV.map(link).join('');
+  // Analysis section
+  html += `<div class="pt-4 pb-2">
+    <div class="sb-label px-3 py-2 text-xs font-bold uppercase tracking-wider text-indigo-300">Analysis</div>
+    <div class="mt-1 space-y-1">${ANALYSIS.map(n=>{
+      const active = cur===n.id;
+      return `<a href="#/${n.id}" class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${active?'bg-white/10 text-white':'text-indigo-200 hover:bg-white/5'}">
+        <i data-lucide="${n.icon}" style="width:18px;height:18px"></i><span class="sb-label">${n.label}</span></a>`;
+    }).join('')}</div>
+  </div>`;
+  root.innerHTML = html;
+
+  const footer = document.getElementById('nav-footer');
+  footer.innerHTML = `
+    <a href="#/settings" class="flex items-center gap-3 px-3 py-2.5 rounded-lg ${cur==='settings'?'bg-indigo-600 text-white':'text-indigo-200 hover:bg-indigo-900 hover:text-white'} transition-colors">
+      <i data-lucide="settings" style="width:20px;height:20px"></i><span class="sb-label">Configuration</span></a>
+    <a href="#/integrations" class="relative flex items-center gap-3 px-3 py-2.5 rounded-lg ${cur==='integrations'?'bg-indigo-600 text-white':'text-indigo-200 hover:bg-indigo-900 hover:text-white'} transition-colors">
+      <i data-lucide="plug" style="width:20px;height:20px"></i><span class="sb-label">Integrations</span><span class="hint-dot"></span></a>
+    <button onclick="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-300 hover:bg-red-900/30 hover:text-red-100 transition-colors">
+      <i data-lucide="log-out" style="width:20px;height:20px"></i><span class="sb-label">Sign Out</span></button>`;
+  icons();
+}
+
+function toggleSidebar(){
+  state.sidebarOpen = !state.sidebarOpen;
+  const sb = document.getElementById('sidebar');
+  const mw = document.getElementById('main-wrap');
+  if(state.sidebarOpen){ sb.classList.remove('w-20'); sb.classList.add('w-64'); mw.classList.remove('ml-20'); mw.classList.add('ml-64'); document.querySelectorAll('.sb-label').forEach(e=>e.classList.remove('hidden')); }
+  else { sb.classList.remove('w-64'); sb.classList.add('w-20'); mw.classList.remove('ml-64'); mw.classList.add('ml-20'); document.querySelectorAll('.sb-label').forEach(e=>e.classList.add('hidden')); }
+}
+function toggleHints(){
+  document.body.classList.toggle('hints-off');
+  const off = document.body.classList.contains('hints-off');
+  document.getElementById('hints-btn').querySelector('span').textContent = 'Hints: '+(off?'Off':'On');
+}
+function syncBrandBranchLabels(){
+  const lbl = `${brand().name} → ${branch().name}`;
+  document.getElementById('sb-brandbranch').textContent = lbl;
+  document.getElementById('hdr-brandbranch').textContent = lbl;
+}
+
+/* ============================================================================
+   ROUTER
+   ========================================================================== */
+const SCREENS = {}; // id -> render fn, registered below
+function route(){
+  let id = (location.hash||'#/dashboard').replace('#/','');
+  if(id==='wrapped'){ openWrapped(); history.replaceState(null,'', '#/'+ (window._lastScreen||'dashboard')); renderNav(); return; }
+  window._lastScreen = id;
+  const fn = SCREENS[id] || SCREENS['dashboard'];
+  const el = document.getElementById('screen-content');
+  el.innerHTML = `<div class="fade-in-content">${fn()}</div>`;
+  icons();
+  // Defer chart rendering until the CSS grid has placed cards in their columns,
+  // otherwise ApexCharts measures full-row width and overflows into the next card.
+  if(CHART_INIT[id]) requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(((location.hash||'#/dashboard').replace('#/','')) === id) CHART_INIT[id]();
+  }));
+  renderNav();
+  syncBrandBranchLabels();
+  document.querySelector('main').scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+
+// Re-render the current screen's charts on resize so widths stay correct.
+let _resizeT;
+window.addEventListener('resize', ()=>{
+  clearTimeout(_resizeT);
+  _resizeT = setTimeout(()=>{
+    const id = (location.hash||'#/dashboard').replace('#/','');
+    if(CHART_INIT[id] && !document.getElementById('app-zoom').classList.contains('hidden')) CHART_INIT[id]();
+  }, 200);
+});
+
+const CHART_INIT = {};
+</script>
+
+<script id="screens-script">
+/* ============================================================================
+   REUSABLE UI HELPERS
+   ========================================================================== */
+function pageHeader(title, sub, right=''){
+  return `<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div><h1 class="text-2xl font-bold text-gray-900">${title}</h1><p class="text-gray-500">${sub}</p></div>
+    <div class="flex items-center gap-3">${right}</div>
+  </div>`;
+}
+function statCard({title,value,sub,icon,color,badge}){
+  return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all hover:shadow-md">
+    <div class="flex justify-between items-start">
+      <div>
+        <p class="text-sm font-medium text-gray-500">${title}</p>
+        <h3 class="text-2xl font-bold text-gray-900 mt-2">${value}</h3>
+        <p class="text-xs text-gray-400 mt-1">${sub||''}</p>
+        ${badge||''}
+      </div>
+      <div class="p-3 rounded-xl ${color}"><i data-lucide="${icon}" style="width:24px;height:24px"></i></div>
+    </div>
+  </div>`;
+}
+function growthBadge(pct){
+  const pos = pct>=0;
+  return `<span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full mt-2 ${pos?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700'}">
+    <i data-lucide="${pos?'arrow-up-right':'arrow-down-right'}" style="width:12px;height:12px"></i>${fmtPct(pct)}</span>`;
+}
+function card(title, sub, body, icon, iconColor){
+  return `<div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+    <div class="flex items-center gap-3 mb-6">
+      ${icon?`<div class="p-2 ${iconColor||'bg-indigo-50 text-indigo-600'} rounded-lg"><i data-lucide="${icon}" style="width:20px;height:20px"></i></div>`:''}
+      <div><h3 class="font-bold text-gray-900">${title}</h3>${sub?`<p class="text-sm text-gray-500">${sub}</p>`:''}</div>
+    </div>${body}</div>`;
+}
+function periodSelector(){
+  return `<div class="flex items-center bg-white border border-gray-200 rounded-lg shadow-sm px-3 py-2 hover:border-indigo-300 transition-colors">
+    <i data-lucide="calendar" class="text-indigo-500 mr-2" style="width:18px;height:18px"></i>
+    <span class="text-sm text-gray-500 mr-2">Year:</span>
+    <select onchange="state.year=Number(this.value); route();" class="bg-transparent font-bold text-gray-900 focus:outline-none cursor-pointer">
+      ${DATA.years.map(y=>`<option ${y===state.year?'selected':''}>${y}</option>`).join('')}
+    </select>
+  </div>`;
+}
+const APEX_BASE = {
+  chart:{ toolbar:{show:false}, fontFamily:'Inter, sans-serif', animations:{enabled:true} },
+  grid:{ borderColor:'#F3F4F6', strokeDashArray:3, padding:{ left:12, right:20, top:8, bottom:14 } },
+  dataLabels:{enabled:false},
+  legend:{ fontSize:'12px', fontFamily:'Inter, sans-serif', labels:{colors:'#6B7280'}, markers:{width:9,height:9,radius:12}, itemMargin:{horizontal:8,vertical:2} },
+  tooltip:{ y:{ formatter:(v)=>fmtIDR(v) } },
+  xaxis:{ axisBorder:{show:false}, axisTicks:{show:false}, tooltip:{enabled:false},
+    labels:{ rotate:0, rotateAlways:false, hideOverlappingLabels:true, trim:false, style:{colors:'#9CA3AF',fontSize:'11px'} } },
+  yaxis:{ labels:{ offsetX:-4, style:{colors:'#9CA3AF',fontSize:'11px'}, formatter:(v)=>fmtCompact(v) } },
+};
+let _charts = [];
+function clearCharts(){ _charts.forEach(c=>{try{c.destroy()}catch(e){}}); _charts=[]; }
+function mkChart(sel, opts){ const el=document.querySelector(sel); if(!el) return; const c=new ApexCharts(el, opts); c.render(); _charts.push(c); }
+
+/* ============================================================================
+   DASHBOARD
+   ========================================================================== */
+SCREENS['dashboard'] = function(){
+  const d = ds();
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Dashboard','Overview of your business performance.', periodSelector())}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      ${statCard({title:'Total Revenue',value:fmtIDR(d.revenue),sub:`Jan - Dec ${state.year}`,icon:'dollar-sign',color:'text-green-600 bg-green-50'})}
+      ${statCard({title:'Transactions',value:fmtNum(d.transactions),sub:'Total Orders',icon:'activity',color:'text-blue-600 bg-blue-50'})}
+      ${statCard({title:'Average Ticket',value:fmtIDR(d.avgTicket),sub:'Per Transaction',icon:'credit-card',color:'text-purple-600 bg-purple-50'})}
+      ${statCard({title:'Best Day',value:d.bestDay.date,sub:fmtIDR(d.bestDay.amount),icon:'trending-up',color:'text-orange-600 bg-orange-50'})}
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+      <div class="flex items-center justify-between mb-6">
+        <div><h3 class="font-bold text-gray-900 text-lg">Revenue Trend</h3><p class="text-sm text-gray-500">Daily sales performance throughout ${state.year}</p></div>
+        <div class="flex items-center gap-2 text-sm text-gray-500"><span class="w-3 h-3 rounded-full bg-indigo-500"></span> Revenue</div>
+      </div>
+      <div id="chart-revenue" class="h-80"></div>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      ${card('Peak Hours','Busiest times of the day','<div id="chart-hourly" class="h-72"></div>','clock','bg-orange-50 text-orange-600')}
+      ${card('Weekly Pattern','Aggregated sales by day of week','<div id="chart-weekly" class="h-72"></div>','calendar-days','bg-teal-50 text-teal-600')}
+    </div>
+    <div id="ai-block">
+      <button onclick="runAI()" class="relative w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold py-4 rounded-xl shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-3 transition-all">
+        <i data-lucide="sparkles" style="width:20px;height:20px"></i> Analyze with AI
+        <span class="hint-dot"></span>
+      </button>
+    </div>
+  </div>`;
+};
+CHART_INIT['dashboard'] = function(){
+  clearCharts(); const d = ds();
+  mkChart('#chart-revenue', {...APEX_BASE,
+    series:[{name:'Revenue', data:d.daily}],
+    chart:{...APEX_BASE.chart, type:'area', height:'100%'},
+    colors:['#4F46E5'], stroke:{curve:'smooth', width:3},
+    fill:{type:'gradient', gradient:{shadeIntensity:1, opacityFrom:.25, opacityTo:0, stops:[0,95]}},
+    xaxis:{...APEX_BASE.xaxis, categories:d.daily.map((_,i)=>{const dt=new Date(state.year,0,1+Math.round(i*365/60)); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'});}), tickAmount:8},
+  });
+  mkChart('#chart-hourly', {...APEX_BASE,
+    series:[{name:'Sales', data:d.hourly}],
+    chart:{...APEX_BASE.chart, type:'bar', height:'100%'},
+    colors:['#F97316'], plotOptions:{bar:{borderRadius:4, columnWidth:'60%'}},
+    xaxis:{...APEX_BASE.xaxis, categories:d.hourly.map((_,i)=>i)},
+  });
+  mkChart('#chart-weekly', {...APEX_BASE,
+    series:[{name:'Sales', data:d.weekly}],
+    chart:{...APEX_BASE.chart, type:'bar', height:'100%'},
+    colors:['#14B8A6'], plotOptions:{bar:{borderRadius:4, columnWidth:'55%'}},
+    xaxis:{...APEX_BASE.xaxis, categories:DAYS},
+  });
+};
+function runAI(){
+  const block = document.getElementById('ai-block');
+  block.innerHTML = `<div class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-4 rounded-xl flex items-center justify-center gap-3"><i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px"></i> Analyzing your data…</div>`;
+  icons();
+  setTimeout(()=>{
+    const d = ds();
+    block.innerHTML = `<div class="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden fade-in-content">
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 flex items-center gap-3 text-white">
+        <i data-lucide="sparkles" style="width:20px;height:20px"></i><h3 class="font-bold">AI Insights</h3>
+      </div>
+      <div class="p-6 space-y-4 text-sm text-gray-700 leading-relaxed">
+        <p>📈 <b>Revenue is trending up.</b> ${brand().name} – ${branch().name} generated <b>${fmtIDR(d.revenue)}</b> across ${fmtNum(d.transactions)} orders this year, with an average ticket of ${fmtIDR(d.avgTicket)}.</p>
+        <p>⏰ <b>Peak demand is 6–8 PM.</b> Evenings drive your highest hourly sales — consider barista staffing and a happy-hour bundle to lift the average ticket.</p>
+        <p>📅 <b>Saturdays are your strongest day.</b> Weekend traffic is ~30% above weekday average; a weekend-only pastry pairing could capture more margin.</p>
+        <p>☕ <b>Top performer:</b> ${d.topProducts[0].name} alone contributed ${fmtIDR(d.topProducts[0].rev)} — your clear hero product.</p>
+      </div>
+      <div class="px-6 py-3 bg-indigo-50/50 text-xs text-indigo-400 border-t border-indigo-50">Generated from your dashboard summary · sandbox demo</div>
+    </div>`;
+    icons();
+  }, 1400);
+}
+
+/* ============================================================================
+   SALES ANALYTICS
+   ========================================================================== */
+SCREENS['analysis-sales'] = function(){
+  const d = ds();
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Sales Analytics','Deep dive into your revenue streams.', periodSelector())}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      ${statCard({title:'Total Revenue',value:fmtIDR(d.revenue),sub:`${state.year}`,icon:'wallet',color:'text-indigo-600 bg-indigo-50',badge:growthBadge(growth(d.transactions))})}
+      ${statCard({title:'Transactions',value:fmtNum(d.transactions),sub:'Total Orders',icon:'activity',color:'text-emerald-600 bg-emerald-50',badge:growthBadge(growth(d.revenue/1e6))})}
+    </div>
+    ${card('Revenue Trend','Current vs previous month','<div id="chart-sales-trend" class="h-72"></div>','trending-up')}
+    ${card('Daily Volume & Average Check','Items sold vs average check value','<div id="chart-sales-combo" class="h-72"></div>','bar-chart-3','bg-emerald-50 text-emerald-600')}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">${card('Top Selling Products','Ranked by revenue', topProductsTable(d), 'shopping-bag','bg-amber-50 text-amber-600')}</div>
+      ${card('Category Mix','Share of revenue', categoryMix(d), 'pie-chart','bg-purple-50 text-purple-600')}
+    </div>
+  </div>`;
+};
+function topProductsTable(d){
+  const max = d.topProducts[0].rev;
+  return `<table class="w-full text-sm text-left">
+    <thead class="text-gray-500 text-xs uppercase tracking-wide"><tr>
+      <th class="pb-3">Product</th><th class="pb-3 text-right">Sold</th><th class="pb-3 text-right">Revenue</th><th class="pb-3 pl-4 w-32">Trend</th></tr></thead>
+    <tbody class="divide-y divide-gray-100">
+      ${d.topProducts.map((p,i)=>`<tr class="hover:bg-gray-50 transition-colors">
+        <td class="py-3 font-medium text-gray-800 flex items-center gap-2"><span class="w-5 h-5 rounded bg-indigo-50 text-indigo-600 text-xs flex items-center justify-center font-bold">${i+1}</span>${p.name}</td>
+        <td class="py-3 text-right text-gray-500">${fmtNum(p.qty)}</td>
+        <td class="py-3 text-right font-semibold text-gray-900">${fmtIDR(p.rev)}</td>
+        <td class="py-3 pl-4"><div class="h-2 rounded-full bg-gray-100"><div class="h-2 rounded-full bg-indigo-500" style="width:${Math.round(p.rev/max*100)}%"></div></div></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+}
+function categoryMix(d){
+  const total = d.categories.reduce((s,c)=>s+c.rev,0);
+  const colors = ['bg-indigo-500','bg-emerald-500','bg-amber-500','bg-pink-500','bg-purple-500'];
+  return `<div class="space-y-4">${d.categories.map((c,i)=>{
+    const pct = Math.round(c.rev/total*100);
+    return `<div><div class="flex justify-between text-sm mb-1"><span class="font-medium text-gray-700">${c.name}</span><span class="text-gray-500">${fmtCompact(c.rev)} · ${pct}%</span></div>
+      <div class="h-2 rounded-full bg-gray-100"><div class="h-2 rounded-full ${colors[i%5]}" style="width:${pct}%"></div></div></div>`;
+  }).join('')}</div>`;
+}
+CHART_INIT['analysis-sales'] = function(){
+  clearCharts(); const d = ds();
+  const cur = d.monthlyRevenue;
+  const prev = cur.map(v=>Math.round(v*0.88));
+  mkChart('#chart-sales-trend', {...APEX_BASE,
+    series:[{name:'This year', data:cur},{name:'Last year', data:prev}],
+    chart:{...APEX_BASE.chart, type:'area', height:'100%'},
+    colors:['#4F46E5','#CBD5E1'], stroke:{curve:'smooth', width:[3,2], dashArray:[0,5]},
+    fill:{type:'gradient', gradient:{opacityFrom:.2, opacityTo:0}},
+    legend:{show:true, position:'top', horizontalAlign:'right'},
+    xaxis:{...APEX_BASE.xaxis, categories:MONTHS},
+  });
+  mkChart('#chart-sales-combo', {...APEX_BASE,
+    series:[{name:'Items Sold', type:'column', data:d.weekly.map(v=>Math.round(v/15000))},{name:'Avg Check', type:'line', data:d.weekly.map(v=>Math.round(d.avgTicket*(0.9+ (v/Math.max(...d.weekly))*0.2)))}],
+    chart:{...APEX_BASE.chart, type:'line', height:'100%'},
+    colors:['#10B981','#F59E0B'], stroke:{width:[0,3], curve:'smooth'},
+    plotOptions:{bar:{borderRadius:4, columnWidth:'50%'}},
+    legend:{show:true, position:'top', horizontalAlign:'right'},
+    yaxis:[{labels:{style:{colors:'#9CA3AF'}, formatter:(v)=>fmtNum(v)}},{opposite:true, labels:{style:{colors:'#9CA3AF'}, formatter:(v)=>fmtCompact(v)}}],
+    tooltip:{}, xaxis:{...APEX_BASE.xaxis, categories:DAYS},
+  });
+};
+
+/* ============================================================================
+   FINANCE ANALYTICS
+   ========================================================================== */
+SCREENS['analysis-finance'] = function(){
+  const p = pnlDerived(ds().pnl);
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Finance Analysis','Upload P&L statements and track your financial metrics.',
+      `<button onclick="openUpload('pnl')" class="relative bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2 transition-colors"><i data-lucide="upload" style="width:18px;height:18px"></i> Upload P&L<span class="hint-dot"></span></button>`)}
+
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
+      <div class="p-2 bg-amber-100 rounded-lg text-amber-600"><i data-lucide="clock" style="width:20px;height:20px"></i></div>
+      <div class="flex-1"><p class="font-semibold text-amber-800">1 Document Awaiting Review</p><p class="text-sm text-amber-600">AI extracted line items. Review and confirm the category mappings.</p></div>
+      <button onclick="openCategoryMapping()" class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-3 py-1.5 rounded-lg">Nov 2025 P&L.xlsx →</button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      ${statCard({title:'Total Revenue',value:fmtIDR(p.revenue),sub:'This period',icon:'dollar-sign',color:'text-green-600 bg-green-50'})}
+      ${statCard({title:'Gross Profit',value:fmtIDR(p.gross),sub:'',icon:'trending-up',color:'text-emerald-600 bg-emerald-50',badge:`<span class="text-xs font-semibold text-emerald-600 mt-2 inline-block">Margin: ${p.grossMargin.toFixed(1)}%</span>`})}
+      ${statCard({title:'Operating Profit',value:fmtIDR(p.operating),sub:'',icon:'bar-chart-3',color:'text-blue-600 bg-blue-50',badge:`<span class="text-xs font-semibold text-blue-600 mt-2 inline-block">Margin: ${p.opMargin.toFixed(1)}%</span>`})}
+      ${statCard({title:'Net Profit',value:fmtIDR(p.net),sub:'',icon:'wallet',color:'text-green-600 bg-green-50',badge:`<span class="text-xs font-semibold ${p.net>=0?'text-green-600':'text-red-600'} mt-2 inline-block">Margin: ${p.netMargin.toFixed(1)}%</span>`})}
+    </div>
+
+    ${card('P&L Flow','How revenue flows down to net profit', pnlSankey(p), 'git-fork','bg-indigo-50 text-indigo-600')}
+    ${card('Margin Trend','Gross / Operating / Net margin over the year','<div id="chart-margin" class="h-72"></div>','line-chart','bg-emerald-50 text-emerald-600')}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      ${card('Cost Structure','Where the money goes', `
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-orange-50"><span class="text-sm font-medium text-orange-800">Cost of Goods Sold</span><span class="font-bold text-orange-700">${fmtIDR(p.cogs)}</span></div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-blue-50"><span class="text-sm font-medium text-blue-800">Operating Expenses</span><span class="font-bold text-blue-700">${fmtIDR(p.opex)}</span></div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-purple-50"><span class="text-sm font-medium text-purple-800">Other Expenses</span><span class="font-bold text-purple-700">${fmtIDR(p.other)}</span></div>
+        </div>`, 'layers','bg-blue-50 text-blue-600')}
+      ${card('Processed Documents','Confirmed P&L statements', `
+        <div class="space-y-2 max-h-64 overflow-y-auto">
+          ${['Oct 2025 P&L.xlsx','Sep 2025 P&L.xlsx','Aug 2025 P&L.xlsx','Q2 2025 Statement.xlsx'].map(f=>`
+            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 group transition-colors">
+              <div class="flex items-center gap-3"><i data-lucide="check-circle-2" class="text-emerald-500" style="width:18px;height:18px"></i><div><p class="text-sm font-medium text-gray-800">${f}</p><p class="text-xs text-gray-400">Confirmed</p></div></div>
+              <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button class="p-1.5 hover:bg-gray-100 rounded text-gray-400"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+                <button class="p-1.5 hover:bg-red-50 rounded text-red-400"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+              </div>
+            </div>`).join('')}
+        </div>`, 'file-check','bg-emerald-50 text-emerald-600')}
+    </div>
+  </div>`;
+};
+function pnlSankey(p){
+  // lightweight SVG flow approximation
+  const bar = (label,val,color,w) => `<div class="flex items-center gap-3"><div class="w-40 shrink-0 text-sm text-gray-600 text-right">${label}</div>
+    <div class="h-9 rounded-md ${color} flex items-center px-3 text-white text-sm font-semibold whitespace-nowrap" style="width:${Math.max(w,10)}%; min-width:120px">${fmtCompact(val)}</div></div>`;
+  const r = p.revenue;
+  return `<div class="space-y-3">
+    ${bar('Revenue', r, 'bg-indigo-500', 100)}
+    ${bar('– COGS', p.cogs, 'bg-orange-400', p.cogs/r*100)}
+    ${bar('= Gross Profit', p.gross, 'bg-emerald-500', p.gross/r*100)}
+    ${bar('– Operating Exp.', p.opex, 'bg-blue-400', p.opex/r*100)}
+    ${bar('= Operating Profit', p.operating, 'bg-teal-500', Math.max(p.operating/r*100,8))}
+    ${bar('– Other Exp.', p.other, 'bg-purple-400', p.other/r*100)}
+    ${bar('= Net Profit', p.net, p.net>=0?'bg-green-600':'bg-red-500', Math.max(p.net/r*100,8))}
+  </div>`;
+}
+CHART_INIT['analysis-finance'] = function(){
+  clearCharts();
+  const gm = MONTHS.map((_,i)=>64+Math.sin(i/2)*3);
+  const om = MONTHS.map((_,i)=>23+Math.sin(i/2+1)*2.5);
+  const nm = MONTHS.map((_,i)=>18+Math.sin(i/2+1.5)*2);
+  mkChart('#chart-margin', {...APEX_BASE,
+    series:[{name:'Gross Margin',data:gm.map(v=>+v.toFixed(1))},{name:'Operating Margin',data:om.map(v=>+v.toFixed(1))},{name:'Net Margin',data:nm.map(v=>+v.toFixed(1))}],
+    chart:{...APEX_BASE.chart, type:'line', height:'100%'},
+    colors:['#10B981','#4F46E5','#F59E0B'], stroke:{curve:'smooth', width:3},
+    legend:{show:true, position:'top', horizontalAlign:'right'},
+    yaxis:{labels:{style:{colors:'#9CA3AF'}, formatter:(v)=>v+'%'}},
+    tooltip:{y:{formatter:(v)=>v+'%'}},
+    xaxis:{...APEX_BASE.xaxis, categories:MONTHS},
+  });
+};
+
+/* ============================================================================
+   PRODUCT & CHANNEL
+   ========================================================================== */
+SCREENS['analysis-product'] = function(){
+  const d = ds();
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Product & Channel','Performance by product and sales channel.', periodSelector())}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      ${card('Revenue by Category','Share across categories','<div id="chart-cat-pie" class="h-72"></div>','pie-chart','bg-purple-50 text-purple-600')}
+      ${card('Channel Breakdown','Where orders come from','<div id="chart-channel" class="h-72"></div>','share-2','bg-indigo-50 text-indigo-600')}
+    </div>
+    ${card('Top Products','Ranked by revenue', topProductsTable(d),'shopping-bag','bg-amber-50 text-amber-600')}
+  </div>`;
+};
+CHART_INIT['analysis-product'] = function(){
+  clearCharts(); const d = ds();
+  mkChart('#chart-cat-pie', {
+    series:d.categories.map(c=>c.rev), labels:d.categories.map(c=>c.name),
+    chart:{type:'donut', height:'100%', fontFamily:'Inter'},
+    colors:['#4F46E5','#10B981','#F59E0B','#EC4899','#8B5CF6'],
+    legend:{position:'bottom'}, dataLabels:{enabled:true, formatter:(v)=>v.toFixed(0)+'%'},
+    tooltip:{y:{formatter:(v)=>fmtIDR(v)}},
+    plotOptions:{pie:{donut:{size:'62%'}}},
+  });
+  mkChart('#chart-channel', {...APEX_BASE,
+    series:[{name:'Revenue', data:[Math.round(d.revenue*0.46),Math.round(d.revenue*0.28),Math.round(d.revenue*0.18),Math.round(d.revenue*0.08)]}],
+    chart:{...APEX_BASE.chart, type:'bar', height:'100%'},
+    colors:['#4F46E5','#10B981','#F59E0B','#EC4899'], plotOptions:{bar:{borderRadius:6, columnWidth:'50%', distributed:true}},
+    legend:{show:false},
+    xaxis:{...APEX_BASE.xaxis, categories:['Dine-in','GoFood','GrabFood','Takeaway']},
+  });
+};
+
+/* ============================================================================
+   TIME COMPARISON
+   ========================================================================== */
+SCREENS['analysis-time'] = function(){
+  const d = ds();
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Time Comparison','Compare performance across periods.',
+      `<div class="flex items-center gap-2">${['Monthly','Quarterly','Yearly'].map(p=>`<button onclick="state.period='${p}';route()" class="px-3 py-1.5 rounded-lg text-sm font-medium ${state.period===p?'bg-indigo-600 text-white':'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}">${p}</button>`).join('')}</div>`)}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      ${statCard({title:'This Period',value:fmtIDR(d.revenue),sub:`${state.year}`,icon:'calendar',color:'text-indigo-600 bg-indigo-50'})}
+      ${statCard({title:'Previous Period',value:fmtIDR(Math.round(d.revenue*0.88)),sub:`${state.year-1}`,icon:'calendar',color:'text-gray-600 bg-gray-100'})}
+      ${statCard({title:'Change',value:'+13.6%',sub:'Year over year',icon:'trending-up',color:'text-emerald-600 bg-emerald-50'})}
+    </div>
+    ${card('Period-over-Period Revenue','This year vs last year','<div id="chart-time" class="h-80"></div>','clock')}
+  </div>`;
+};
+CHART_INIT['analysis-time'] = function(){
+  clearCharts(); const d = ds();
+  mkChart('#chart-time', {...APEX_BASE,
+    series:[{name:state.year, data:d.monthlyRevenue},{name:state.year-1, data:d.monthlyRevenue.map(v=>Math.round(v*0.88))}],
+    chart:{...APEX_BASE.chart, type:'area', height:'100%'},
+    colors:['#4F46E5','#A5B4FC'], stroke:{curve:'smooth', width:[3,2], dashArray:[0,5]},
+    fill:{type:'gradient', gradient:{opacityFrom:.25, opacityTo:0}},
+    legend:{show:true, position:'top', horizontalAlign:'right'},
+    xaxis:{...APEX_BASE.xaxis, categories:MONTHS},
+  });
+};
+
+/* ============================================================================
+   BRANCH COMPARISON
+   ========================================================================== */
+SCREENS['analysis-branch'] = function(){
+  const branches = brand().branches.map(id=>DATA.branches[id]);
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Branch Comparison','Compare metrics across all your branches.', periodSelector())}
+    ${card('Revenue by Branch','Total revenue per location','<div id="chart-branch" class="h-72"></div>','git-compare')}
+    ${card('Branch Metrics','Side-by-side performance', `
+      <table class="w-full text-sm text-left">
+        <thead class="text-gray-500 text-xs uppercase tracking-wide"><tr>
+          <th class="pb-3">Branch</th><th class="pb-3 text-right">Revenue</th><th class="pb-3 text-right">Transactions</th><th class="pb-3 text-right">Avg Ticket</th><th class="pb-3 text-right">Net Margin</th></tr></thead>
+        <tbody class="divide-y divide-gray-100">
+          ${branches.map(b=>{const p=pnlDerived(b.ds.pnl); return `<tr class="hover:bg-gray-50">
+            <td class="py-3 font-medium text-gray-800">${b.name}</td>
+            <td class="py-3 text-right font-semibold">${fmtIDR(b.ds.revenue)}</td>
+            <td class="py-3 text-right text-gray-500">${fmtNum(b.ds.transactions)}</td>
+            <td class="py-3 text-right text-gray-500">${fmtIDR(b.ds.avgTicket)}</td>
+            <td class="py-3 text-right"><span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">${p.netMargin.toFixed(1)}%</span></td>
+          </tr>`;}).join('')}
+        </tbody></table>`,'table','bg-indigo-50 text-indigo-600')}
+  </div>`;
+};
+CHART_INIT['analysis-branch'] = function(){
+  clearCharts();
+  const branches = brand().branches.map(id=>DATA.branches[id]);
+  mkChart('#chart-branch', {...APEX_BASE,
+    series:[{name:'Revenue', data:branches.map(b=>b.ds.revenue)}],
+    chart:{...APEX_BASE.chart, type:'bar', height:'100%'},
+    colors:['#4F46E5'], plotOptions:{bar:{borderRadius:6, columnWidth:'45%', distributed:true}},
+    legend:{show:false},
+    xaxis:{...APEX_BASE.xaxis, categories:branches.map(b=>b.name)},
+  });
+};
+</script>
+
+<script id="screens-script-2">
+/* ============================================================================
+   DATA HUB
+   ========================================================================== */
+const FILES = {
+  sales: [
+    {name:'Sales Nov 2025.xlsx', size:'2.4 MB', period:'Nov 2025'},
+    {name:'Sales Oct 2025.xlsx', size:'2.1 MB', period:'Oct 2025'},
+    {name:'Sales Sep 2025.csv', size:'1.8 MB', period:'Sep 2025'},
+  ],
+  pnl: [
+    {name:'Nov 2025 P&L.xlsx', status:'pending'},
+    {name:'Oct 2025 P&L.xlsx', status:'confirmed'},
+    {name:'Sep 2025 P&L.xlsx', status:'confirmed'},
+  ],
+};
+SCREENS['data-hub'] = function(){
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Data Hub','Manage your financial data sources.',
+      `<span class="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-sm text-indigo-600"><i data-lucide="building-2" style="width:14px;height:14px"></i>${brand().name} → ${branch().name}</span>`)}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Sales -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex items-center justify-between text-white">
+          <div class="flex items-center gap-3"><i data-lucide="file-spreadsheet" style="width:22px;height:22px"></i><div><h3 class="font-bold">Sales Reports</h3><p class="text-xs text-indigo-200" id="sales-count">${FILES.sales.length} files</p></div></div>
+          <button onclick="openUpload('sales')" class="relative bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2"><i data-lucide="upload" style="width:16px;height:16px"></i> Upload<span class="hint-dot"></span></button>
+        </div>
+        <div class="p-4 space-y-2 max-h-96 overflow-y-auto" id="sales-list">${salesRows()}</div>
+      </div>
+      <!-- P&L -->
+      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 px-6 py-4 flex items-center justify-between text-white">
+          <div class="flex items-center gap-3"><i data-lucide="file-text" style="width:22px;height:22px"></i><div><h3 class="font-bold">P&L Documents</h3><p class="text-xs text-emerald-200">${FILES.pnl.length} files · 1 pending</p></div></div>
+          <button onclick="openUpload('pnl')" class="bg-white/15 hover:bg-white/25 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2"><i data-lucide="upload" style="width:16px;height:16px"></i> Upload</button>
+        </div>
+        <div class="p-4 space-y-2 max-h-96 overflow-y-auto">${pnlRows()}</div>
+      </div>
+    </div>
+  </div>`;
+};
+function salesRows(){
+  return FILES.sales.map(f=>`<div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 group transition-colors">
+    <div class="flex items-center gap-3"><i data-lucide="file-spreadsheet" class="text-emerald-500" style="width:20px;height:20px"></i><div><p class="text-sm font-medium text-gray-800">${f.name}</p><p class="text-xs text-gray-400">${f.size} · ${f.period}</p></div></div>
+    <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <button class="p-1.5 hover:bg-gray-100 rounded text-gray-400"><i data-lucide="eye" style="width:16px;height:16px"></i></button>
+      <button class="p-1.5 hover:bg-red-50 rounded text-red-400"><i data-lucide="trash-2" style="width:16px;height:16px"></i></button>
+    </div></div>`).join('');
+}
+function pnlRows(){
+  return FILES.pnl.map(f=>{
+    const pending = f.status==='pending';
+    return `<div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 group transition-colors ${pending?'cursor-pointer':''}" ${pending?'onclick="openCategoryMapping()"':''}>
+      <div class="flex items-center gap-3"><i data-lucide="file-text" class="text-emerald-500" style="width:20px;height:20px"></i><div><p class="text-sm font-medium text-gray-800">${f.name}</p>
+        ${pending?'<span class="inline-flex items-center gap-1 text-xs text-amber-600 font-medium"><i data-lucide="clock" style="width:12px;height:12px"></i> Pending — click to map</span>':'<span class="inline-flex items-center gap-1 text-xs text-emerald-600 font-medium"><i data-lucide="check-circle-2" style="width:12px;height:12px"></i> Confirmed</span>'}
+      </div></div></div>`;
+  }).join('');
+}
+
+/* ============================================================================
+   INVESTOR REPORT
+   ========================================================================== */
+SCREENS['investor-report'] = function(){
+  return `<div class="px-6 pt-6 pb-10 h-full flex flex-col">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      ${pageHeader('Investor Report','Generate professional PDFs for stakeholders.',
+        `<div class="flex items-center gap-3">
+          <div class="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2"><i data-lucide="calendar" class="text-indigo-500 mr-2" style="width:18px;height:18px"></i>
+            <select class="bg-transparent font-medium text-gray-700 focus:outline-none">${MONTHS.map((m,i)=>`<option ${i===10?'selected':''}>${m} ${state.year}</option>`).join('')}</select></div>
+          <button onclick="generateReport()" class="relative bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2"><i data-lucide="play" style="width:18px;height:18px"></i> Generate Report<span class="hint-dot"></span></button>
+          <button onclick="showToast('Report.pdf downloaded','success')" class="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2"><i data-lucide="download" style="width:18px;height:18px"></i> Download PDF</button>
+        </div>`)}
+    </div>
+    <div id="report-viewer" class="flex-1 min-h-[480px] bg-gray-100 rounded-xl border border-gray-200 shadow-inner flex items-center justify-center">
+      <div class="text-center text-gray-400"><i data-lucide="file-text" style="width:48px;height:48px" class="mx-auto mb-3"></i><p class="font-medium text-gray-500">Ready to Generate</p><p class="text-sm">Pick a period and click Generate Report.</p></div>
+    </div>
+  </div>`;
+};
+function generateReport(){
+  const v = document.getElementById('report-viewer');
+  v.innerHTML = `<div class="text-center text-gray-400"><i data-lucide="loader-2" class="animate-spin mx-auto mb-3" style="width:40px;height:40px"></i><p class="font-medium text-gray-500">Fetching data…</p></div>`;
+  icons();
+  setTimeout(()=>{
+    const d = ds(); const p = pnlDerived(d.pnl);
+    v.innerHTML = `<div class="w-full h-full p-8 overflow-y-auto"><div class="max-w-2xl mx-auto bg-white shadow-lg rounded-lg p-10 fade-in-content border border-gray-200">
+      <div class="flex items-center justify-between border-b pb-4 mb-6">
+        <div class="flex items-center gap-2"><div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center"><i data-lucide="pie-chart" class="text-white" style="width:18px;height:18px"></i></div><span class="font-bold text-lg">Finalytics</span></div>
+        <div class="text-right text-sm text-gray-400">Investor Report<br>Nov ${state.year}</div>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">${brand().name}</h2>
+      <p class="text-gray-500">${branch().name} · ${brand().profile.sector} · ${brand().profile.region}</p>
+      <div class="grid grid-cols-2 gap-4 my-6">
+        <div class="p-4 bg-gray-50 rounded-lg"><p class="text-xs text-gray-400">Total Revenue</p><p class="text-xl font-bold">${fmtIDR(d.revenue)}</p></div>
+        <div class="p-4 bg-gray-50 rounded-lg"><p class="text-xs text-gray-400">Net Profit</p><p class="text-xl font-bold">${fmtIDR(p.net)}</p></div>
+        <div class="p-4 bg-gray-50 rounded-lg"><p class="text-xs text-gray-400">Transactions</p><p class="text-xl font-bold">${fmtNum(d.transactions)}</p></div>
+        <div class="p-4 bg-gray-50 rounded-lg"><p class="text-xs text-gray-400">Net Margin</p><p class="text-xl font-bold">${p.netMargin.toFixed(1)}%</p></div>
+      </div>
+      <h3 class="font-bold text-gray-800 mb-2">Executive Summary</h3>
+      <p class="text-sm text-gray-600 leading-relaxed mb-4">${brand().name} delivered strong, profitable growth this period with revenue of ${fmtIDR(d.revenue)} and a healthy net margin of ${p.netMargin.toFixed(1)}%. ${d.topProducts[0].name} remains the hero product.</p>
+      <h3 class="font-bold text-gray-800 mb-2">Top Products</h3>
+      <table class="w-full text-sm"><tbody>${d.topProducts.slice(0,3).map(pr=>`<tr class="border-b border-gray-100"><td class="py-1.5">${pr.name}</td><td class="py-1.5 text-right font-semibold">${fmtIDR(pr.rev)}</td></tr>`).join('')}</tbody></table>
+    </div></div>`;
+    icons();
+  }, 1500);
+}
+
+/* ============================================================================
+   INVESTOR CONNECT
+   ========================================================================== */
+SCREENS['investor-connect'] = function(){
+  const d = ds(); const p = pnlDerived(d.pnl); const pr = brand().profile;
+  const total = d.categories.reduce((s,c)=>s+c.rev,0);
+  return `<div class="px-6 pt-6 pb-10 space-y-6">
+    ${pageHeader('Investor Connect','Investor-ready business overview & downloadable summary.',
+      `<div class="flex items-center gap-2">
+        ${['Monthly','Quarterly','Yearly'].map(x=>`<button onclick="state.period='${x}';route()" class="px-3 py-1.5 rounded-lg text-sm font-medium ${state.period===x?'bg-indigo-600 text-white':'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}">${x}</button>`).join('')}
+        <button onclick="showToast('Investor summary PDF downloaded','success')" class="relative bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2.5 rounded-lg flex items-center gap-2"><i data-lucide="download" style="width:18px;height:18px"></i> Download PDF<span class="hint-dot"></span></button>
+      </div>`)}
+
+    <div class="bg-gradient-to-br from-indigo-900 to-purple-900 rounded-xl p-6 text-white">
+      <div class="flex items-center gap-2 mb-4"><i data-lucide="briefcase" style="width:18px;height:18px"></i><h3 class="font-bold">Business Overview</h3></div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+        ${[['Sector',pr.sector],['Region',pr.region],['Business Size',pr.size],['Business Model',pr.model],['Target Market',pr.target]].map(([k,v])=>`<div><p class="text-indigo-300 text-xs">${k}</p><p class="font-semibold mt-0.5">${v}</p></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+      ${statCard({title:'Total Revenue',value:fmtIDR(d.revenue),sub:'',icon:'dollar-sign',color:'text-emerald-600 bg-emerald-50',badge:growthBadge(growth(d.transactions))})}
+      ${statCard({title:'Transactions',value:fmtNum(d.transactions),sub:'',icon:'activity',color:'text-blue-600 bg-blue-50',badge:growthBadge(growth(d.revenue/1e6))})}
+      ${statCard({title:'Average Ticket',value:fmtIDR(d.avgTicket),sub:'',icon:'credit-card',color:'text-purple-600 bg-purple-50'})}
+      ${statCard({title:'Net Profit Margin',value:p.netMargin.toFixed(1)+'%',sub:'',icon:'percent',color:'text-amber-600 bg-amber-50'})}
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white"><p class="text-emerald-100 text-sm">Gross Margin</p><p class="text-4xl font-black mt-2">${p.grossMargin.toFixed(1)}%</p></div>
+      <div class="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 text-white"><p class="text-blue-100 text-sm">Operating Margin</p><p class="text-4xl font-black mt-2">${p.opMargin.toFixed(1)}%</p></div>
+      <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white"><p class="text-purple-100 text-sm">Net Profit Margin</p><p class="text-4xl font-black mt-2">${p.netMargin.toFixed(1)}%</p></div>
+    </div>
+
+    ${card('Revenue Trend','Monthly revenue this period','<div id="chart-ic-trend" class="h-56"></div>','trending-up')}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      ${card('P&L Summary','Period statement', `
+        <table class="w-full text-sm">
+          <tbody class="divide-y divide-gray-100">
+            ${[['Revenue',p.revenue,false],['COGS',-p.cogs,false],['Gross Profit',p.gross,true],['Operating Expenses',-p.opex,false],['Operating Profit',p.operating,true],['Other Expenses',-p.other,false],['Net Profit',p.net,true]].map(([k,v,bold])=>`
+              <tr class="${bold?'bg-gray-50':''}"><td class="py-2 px-2 ${bold?'font-bold text-gray-900':'text-gray-600'}">${k}</td><td class="py-2 px-2 text-right ${bold?'font-bold text-gray-900':'text-gray-700'}">${v<0?'('+fmtIDR(-v)+')':fmtIDR(v)}</td></tr>`).join('')}
+          </tbody></table>`,'file-text','bg-emerald-50 text-emerald-600')}
+      ${card('Top 5 Products','By revenue', `<div class="space-y-1">${d.topProducts.map((pp,i)=>`
+        <div class="flex items-center justify-between p-2.5 rounded-lg hover:bg-gray-50"><span class="flex items-center gap-3 text-sm text-gray-700"><span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-600 text-xs flex items-center justify-center font-bold">${i+1}</span>${pp.name}</span><span class="font-semibold text-gray-900 text-sm">${fmtIDR(pp.rev)}</span></div>`).join('')}</div>`,'award','bg-amber-50 text-amber-600')}
+    </div>
+
+    ${card('Revenue by Category','', `<div class="grid grid-cols-2 md:grid-cols-5 gap-3">${d.categories.map(c=>`
+      <div class="p-3 rounded-lg border border-gray-100 text-center"><p class="text-xs text-gray-400">${c.name}</p><p class="font-bold text-gray-900 mt-1">${fmtCompact(c.rev)}</p><p class="text-xs text-indigo-500">${Math.round(c.rev/total*100)}%</p></div>`).join('')}</div>`,'layout-grid','bg-purple-50 text-purple-600')}
+
+    <div class="bg-gradient-to-r from-indigo-600 to-pink-600 rounded-xl p-8 text-white text-center">
+      <i data-lucide="handshake" class="mx-auto mb-3" style="width:36px;height:36px"></i>
+      <h3 class="text-2xl font-bold">Ready to Connect with Investors?</h3>
+      <p class="text-indigo-100 mt-1">Share an investor-ready snapshot of your business in one click.</p>
+      <div class="flex items-center justify-center gap-3 mt-5">
+        <button onclick="showToast('Investor summary PDF downloaded','success')" class="bg-white text-indigo-700 font-semibold px-5 py-2.5 rounded-lg hover:bg-indigo-50">Download PDF</button>
+        <button onclick="showToast('Investor connection request sent','info')" class="bg-white/15 hover:bg-white/25 font-semibold px-5 py-2.5 rounded-lg">Connect with Investor</button>
+      </div>
+    </div>
+  </div>`;
+};
+CHART_INIT['investor-connect'] = function(){
+  clearCharts(); const d = ds();
+  mkChart('#chart-ic-trend', {...APEX_BASE,
+    series:[{name:'Revenue', data:d.monthlyRevenue}],
+    chart:{...APEX_BASE.chart, type:'bar', height:'100%'},
+    colors:['#4F46E5'], plotOptions:{bar:{borderRadius:4, columnWidth:'55%'}},
+    xaxis:{...APEX_BASE.xaxis, categories:MONTHS},
+  });
+};
+
+/* ============================================================================
+   CONFIGURATION
+   ========================================================================== */
+const SECTORS=['F&B','Retail','Manufacturing','Services','Healthcare','Technology','Education','Hospitality','Logistics','Other'];
+const REGIONS=['Jakarta','Surabaya','Bandung','Medan','Semarang','Bali','Yogyakarta','Makassar','Palembang','Other'];
+const SIZES=['Micro (1-10)','Small (11-50)','Medium (51-200)','Large (201-1000)','Enterprise (1000+)'];
+const MODELS=['B2C','B2B','B2B2C','Marketplace','Subscription','Franchise','Hybrid'];
+SCREENS['settings'] = function(){
+  const pr = brand().profile;
+  const sel = (label,icon,opts,val) => `<div><label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1"><i data-lucide="${icon}" class="text-indigo-500" style="width:14px;height:14px"></i>${label}</label>
+    <select class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40">${opts.map(o=>`<option ${o===val?'selected':''}>${o}</option>`).join('')}</select></div>`;
+  return `<div class="px-6 pt-6 pb-10 space-y-6 max-w-4xl">
+    ${pageHeader('Configuration','Set up your business profile to power better AI-driven insights.','')}
+    ${card('Brand', '', `<select onchange="state.brandId=this.value; state.branchId=brand().branches[0]; route();" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+      ${DATA.brands.map(b=>`<option value="${b.id}" ${b.id===state.brandId?'selected':''}>${b.name}</option>`).join('')}</select>`,'building-2','bg-indigo-50 text-indigo-600')}
+    ${card('Business Profile','Used for investor summaries and AI context', `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${sel('Sector','briefcase',SECTORS,pr.sector)}
+        ${sel('Region','map-pin',REGIONS,pr.region)}
+        ${sel('Business Size','users',SIZES,pr.size)}
+        ${sel('Business Model','briefcase',MODELS,pr.model)}
+        <div class="md:col-span-2"><label class="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1"><i data-lucide="target" class="text-indigo-500" style="width:14px;height:14px"></i>Target Market</label>
+          <textarea rows="2" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40">${pr.target}</textarea></div>
+      </div>
+      <div class="mt-5 flex items-center gap-3">
+        <button onclick="showToast('Business profile saved','success')" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold px-5 py-2.5 rounded-lg">Save Profile</button>
+        <span class="text-sm text-gray-400">Changes apply to investor reports & AI insights</span>
+      </div>`,'briefcase','bg-purple-50 text-purple-600')}
+    ${card('Maintenance','Rebuild aggregated data for this brand', `
+      <button onclick="rebuildAgg(this)" class="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2.5 rounded-lg"><i data-lucide="wrench" style="width:16px;height:16px"></i> Rebuild aggregates</button>
+      <div id="rebuild-result" class="mt-3"></div>`,'wrench','bg-gray-100 text-gray-600')}
+  </div>`;
+};
+function rebuildAgg(btn){
+  btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:16px;height:16px"></i> Rebuilding…'; icons();
+  setTimeout(()=>{
+    btn.innerHTML = '<i data-lucide="wrench" style="width:16px;height:16px"></i> Rebuild aggregates'; icons();
+    document.getElementById('rebuild-result').innerHTML = `<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-700 fade-in-content">✓ Rebuild complete — 365 days, 12 months, 199,600 transactions scanned in 2.4s</div>`;
+  }, 1300);
+}
+
+/* ============================================================================
+   INTEGRATIONS
+   ========================================================================== */
+SCREENS['integrations'] = function(){
+  const branches = brand().branches.map(id=>DATA.branches[id]);
+  return `<div class="px-6 pt-6 pb-10 space-y-8">
+    ${pageHeader('🔌 Integrations','Connect MOKA or ESB so Finalytics auto-fetches sales — no more CSV uploads.','')}
+
+    <!-- Connected -->
+    <div>
+      <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Connected (Brand-level: MOKA)</h3>
+      <div id="moka-slot">${state.integrations.moka ? connectedCard('MOKA','Kopi Nusantara HQ',false) : availableRow('MOKA','POS — brand-level. One account syncs all outlets.','moka')}</div>
+    </div>
+
+    <!-- ESB per branch -->
+    <div>
+      <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">ESB — Per Branch</h3>
+      <div class="space-y-3">
+        ${branches.map(b=>{
+          const key = 'esb_'+b.id; const connected = state.integrations[key];
+          return `<div id="esb-slot-${b.id}">${connected ? connectedCard('ESB · '+b.name, b.name, true) : `
+            <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3"><div class="p-2 bg-gray-100 rounded-lg text-gray-500"><i data-lucide="store" style="width:20px;height:20px"></i></div><div><p class="font-semibold text-gray-800">${b.name}</p><p class="text-xs text-gray-400">ESB not connected</p></div></div>
+              <button onclick="openIntegrationConnect('ESB','${key}')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg">Connect ESB</button>
+            </div>`}</div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Available -->
+    <div>
+      <h3 class="text-sm font-bold uppercase tracking-wider text-gray-400 mb-3">Available Integrations</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div class="flex items-center justify-between mb-2"><h4 class="font-bold text-gray-800">MOKA POS</h4><span class="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">Webhooks</span></div>
+          <p class="text-sm text-gray-500 mb-4">Brand-level POS. Maps each MOKA outlet to a Finalytics branch and auto-syncs sales.</p>
+          <button onclick="openIntegrationConnect('MOKA','moka')" class="relative w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg flex items-center justify-center gap-2"><i data-lucide="plus" style="width:16px;height:16px"></i> Connect<span class="hint-dot"></span></button>
+        </div>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div class="flex items-center justify-between mb-2"><h4 class="font-bold text-gray-800">ESB</h4><span class="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full font-medium">Webhooks</span></div>
+          <p class="text-sm text-gray-500 mb-4">Branch-level accounting/POS. One ESB account per Finalytics branch.</p>
+          <button onclick="openIntegrationConnect('ESB','esb_'+state.branchId)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 rounded-lg flex items-center justify-center gap-2"><i data-lucide="plus" style="width:16px;height:16px"></i> Connect</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+};
+function connectedCard(name, business, isEsb){
+  return `<div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+    <div class="p-5 flex items-center justify-between border-b border-gray-50">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-50 rounded-lg text-indigo-600"><i data-lucide="plug" style="width:22px;height:22px"></i></div>
+        <div><div class="flex items-center gap-2"><p class="font-bold text-gray-800">${name}</p><span class="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>Connected</span></div>
+          <p class="text-xs text-gray-400">${business} · last sync 12 min ago · every 60 min${isEsb?'':' · 2 outlets mapped'}</p></div>
+      </div>
+      <button onclick="disconnect(this)" class="text-sm text-red-500 hover:text-red-600 font-medium">Disconnect</button>
+    </div>
+    <div class="px-5 py-3 flex flex-wrap gap-2 bg-gray-50/50">
+      ${[['map','Outlets'],['history','Recent syncs'],['download-cloud','Backfill'],...(isEsb?[['calendar-range','Coverage']]:[]),['refresh-cw','Sync now']].map(([ic,lbl])=>`
+        <button onclick="${lbl==='Sync now'?"syncNow(this)":lbl==='Coverage'?"toggleCoverage(this)":"showToast('"+lbl+" panel opened (demo)','info')"}" class="flex items-center gap-1.5 text-sm bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg text-gray-600"><i data-lucide="${ic}" style="width:14px;height:14px"></i>${lbl}</button>`).join('')}
+    </div>
+    ${isEsb?`<div class="coverage-panel hidden px-5 pb-5">${coverageGrid()}</div>`:''}
+  </div>`;
+}
+function availableRow(name, desc, key){
+  return `<div class="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
+    <div class="flex items-center gap-3"><div class="p-2.5 bg-gray-100 rounded-lg text-gray-500"><i data-lucide="plug" style="width:22px;height:22px"></i></div><div><p class="font-bold text-gray-800">${name}</p><p class="text-sm text-gray-500">${desc}</p></div></div>
+    <button onclick="openIntegrationConnect('${name}','${key}')" class="relative bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2"><i data-lucide="plus" style="width:16px;height:16px"></i> Connect<span class="hint-dot"></span></button>
+  </div>`;
+}
+function coverageGrid(){
+  const months=['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11'];
+  return `<div class="border border-gray-100 rounded-lg overflow-hidden"><table class="w-full text-sm"><thead class="bg-gray-50 text-gray-500 text-xs"><tr><th class="text-left px-3 py-2">Month</th><th class="text-left px-3 py-2">Status</th><th class="text-right px-3 py-2">Rows</th><th class="text-right px-3 py-2">Last fetched</th></tr></thead><tbody class="divide-y divide-gray-100">
+    ${months.map((m,i)=>{const partial=i===months.length-1; return `<tr><td class="px-3 py-2 font-medium text-gray-700">${m}</td>
+      <td class="px-3 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${partial?'bg-amber-50 text-amber-700':'bg-emerald-50 text-emerald-700'}">${partial?'partial':'complete'}</span></td>
+      <td class="px-3 py-2 text-right text-gray-500">${fmtNum(8000+i*420)}</td><td class="px-3 py-2 text-right text-gray-400">${partial?'12 min ago':m+'-28'}</td></tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+function toggleCoverage(btn){ const panel = btn.closest('.bg-white').querySelector('.coverage-panel'); if(panel) panel.classList.toggle('hidden'); }
+function disconnect(btn){
+  // find which slot
+  showToast('Integration disconnected','info');
+  // reset state by re-rendering; simplest: flip all-matching off based on card text
+  const card = btn.closest('[id^="moka-slot"],[id^="esb-slot-"]');
+  if(card){ if(card.id==='moka-slot') state.integrations.moka=false; else { const bid=card.id.replace('esb-slot-',''); state.integrations['esb_'+bid]=false; } }
+  route();
+}
+function syncNow(btn){
+  const orig = btn.innerHTML; btn.innerHTML='<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px"></i>Syncing'; icons();
+  setTimeout(()=>{ btn.innerHTML=orig; icons(); showToast('Sync complete — 1,284 new transactions','success'); }, 1400);
+}
+
+/* ============================================================================
+   MODALS
+   ========================================================================== */
+function modalShell(inner, wide){
+  return `<div class="fixed inset-0 modal-backdrop z-40 flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
+    <div class="bg-white rounded-2xl shadow-2xl w-full ${wide?'max-w-2xl':'max-w-md'} animate-slide-up max-h-[90vh] overflow-y-auto">${inner}</div></div>`;
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+function openBrandBranch(){
+  const root = document.getElementById('modal-root');
+  root.innerHTML = modalShell(`
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-gray-900">Switch Brand & Branch</h2><button onclick="closeModal()" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <div class="space-y-4">
+        ${DATA.brands.map(b=>`<div class="border border-gray-100 rounded-xl p-4">
+          <div class="flex items-center gap-2 mb-3"><div class="p-2 bg-indigo-50 rounded-lg text-indigo-600"><i data-lucide="building-2" style="width:18px;height:18px"></i></div><p class="font-bold text-gray-800">${b.name}</p></div>
+          <div class="grid grid-cols-2 gap-2">
+            ${b.branches.map(id=>{const br=DATA.branches[id]; const active=state.branchId===id; return `<button onclick="selectBranch('${b.id}','${id}')" class="text-left p-3 rounded-lg border ${active?'border-indigo-500 bg-indigo-50':'border-gray-100 hover:bg-gray-50'} transition-colors">
+              <p class="font-medium text-sm text-gray-800 flex items-center gap-1"><i data-lucide="map-pin" class="text-indigo-400" style="width:13px;height:13px"></i>${br.name}</p><p class="text-xs text-gray-400 mt-0.5 truncate">${br.address}</p></button>`;}).join('')}
+          </div>
+        </div>`).join('')}
+      </div>
+      <button onclick="showToast('New branch form (demo)','info')" class="mt-4 w-full border-2 border-dashed border-gray-200 hover:border-indigo-300 text-gray-500 hover:text-indigo-600 rounded-xl py-2.5 text-sm font-medium flex items-center justify-center gap-2"><i data-lucide="plus" style="width:16px;height:16px"></i> Add brand or branch</button>
+    </div>`);
+  icons();
+}
+function selectBranch(brandId, branchId){ state.brandId=brandId; state.branchId=branchId; closeModal(); route(); showToast('Switched to '+DATA.branches[branchId].name,'info'); }
+
+function openUpload(type){
+  const root=document.getElementById('modal-root');
+  const sales = type==='sales';
+  root.innerHTML = modalShell(`
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-1"><h2 class="text-xl font-bold text-gray-900">Upload ${sales?'Sales Report':'P&L Document'}</h2><button onclick="closeModal()" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <p class="text-sm text-gray-500 mb-4">Supported formats: Excel, CSV${sales?', PDF':''}</p>
+      <div id="drop-zone" class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-indigo-300 transition-colors cursor-pointer" onclick="fakeUpload('${type}')">
+        <i data-lucide="upload-cloud" class="mx-auto text-gray-300 mb-2" style="width:40px;height:40px"></i>
+        <p class="text-sm text-gray-600 font-medium">Drag a file here or click to upload</p>
+        <p class="text-xs text-gray-400 mt-1">${sales?'Sales Dec 2025.xlsx':'Dec 2025 P&L.xlsx'} (demo)</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div><label class="text-xs font-medium text-gray-500">Brand</label><div class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 mt-1">${brand().name}</div></div>
+        <div><label class="text-xs font-medium text-gray-500">Branch</label><div class="px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 mt-1">${branch().name}</div></div>
+      </div>
+      <div id="upload-progress" class="mt-4"></div>
+    </div>`);
+  icons();
+}
+function fakeUpload(type){
+  const prog=document.getElementById('upload-progress');
+  prog.innerHTML=`<div class="bg-gray-100 rounded-full h-2 overflow-hidden"><div id="prog-bar" class="bg-indigo-500 h-2 rounded-full transition-all" style="width:0%"></div></div><p id="prog-label" class="text-xs text-gray-500 mt-2">Uploading… 0%</p>`;
+  let pct=0; const t=setInterval(()=>{
+    pct+=Math.round(8+pct/6);
+    if(pct>=100){ pct=100; clearInterval(t); }
+    document.getElementById('prog-bar').style.width=pct+'%';
+    document.getElementById('prog-label').textContent = pct<100?`Uploading… ${pct}%`:'Processing…';
+    if(pct===100){ setTimeout(()=>{
+      closeModal();
+      if(type==='sales'){ FILES.sales.unshift({name:'Sales Dec 2025.xlsx',size:'2.6 MB',period:'Dec 2025'}); if(SCREENS && location.hash.includes('data-hub')) route(); showToast('Sales file uploaded & aggregated','success'); }
+      else { showToast('P&L uploaded — AI extracted line items','success'); setTimeout(openCategoryMapping, 700); }
+    }, 500); }
+  }, 220);
+}
+
+function openCategoryMapping(){
+  closeModal();
+  const lines=[
+    {label:'Food & Beverage Sales', cat:'Revenue'},
+    {label:'Merchandise Sales', cat:'Revenue'},
+    {label:'Raw Materials', cat:'COGS'},
+    {label:'Packaging', cat:'COGS'},
+    {label:'Staff Salaries', cat:'Operating Expenses'},
+    {label:'Rent', cat:'Operating Expenses'},
+    {label:'Marketing', cat:'Operating Expenses'},
+    {label:'Bank Charges', cat:'Other Expenses'},
+  ];
+  const cats=['Revenue','COGS','Operating Expenses','Other Expenses'];
+  const root=document.getElementById('modal-root');
+  root.innerHTML = modalShell(`
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-1"><h2 class="text-xl font-bold text-gray-900">Confirm Category Mapping</h2><button onclick="closeModal()" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <p class="text-sm text-gray-500 mb-4">AI mapped each line item from <b>Nov 2025 P&L.xlsx</b>. Review and confirm.</p>
+      <div class="space-y-2 max-h-80 overflow-y-auto">
+        ${lines.map(l=>`<div class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-gray-50">
+          <span class="text-sm text-gray-700 flex-1">${l.label}</span>
+          <select class="text-sm border border-gray-200 rounded-lg px-2 py-1.5 bg-white">${cats.map(c=>`<option ${c===l.cat?'selected':''}>${c}</option>`).join('')}</select>
+        </div>`).join('')}
+      </div>
+      <div class="flex items-center justify-end gap-3 mt-5 pt-4 border-t border-gray-100">
+        <button onclick="closeModal()" class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+        <button onclick="confirmMapping()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">Confirm & Save</button>
+      </div>
+    </div>`);
+  icons();
+}
+function confirmMapping(){
+  const f = FILES.pnl.find(x=>x.status==='pending'); if(f) f.status='confirmed';
+  closeModal(); showToast('P&L mappings confirmed','success');
+  if(location.hash.includes('data-hub')||location.hash.includes('finance')) route();
+}
+
+function openIntegrationConnect(name, key){
+  const root=document.getElementById('modal-root');
+  const fields = name==='MOKA' ? [['API Key','password'],['Business ID','text']] : [['Username','text'],['Password','password'],['Outlet Code','text']];
+  root.innerHTML = modalShell(`
+    <div class="p-6">
+      <div class="flex items-center justify-between mb-1"><h2 class="text-xl font-bold text-gray-900">Connect ${name}</h2><button onclick="closeModal()" class="p-1.5 hover:bg-gray-100 rounded-lg"><i data-lucide="x" style="width:18px;height:18px"></i></button></div>
+      <p class="text-sm text-gray-500 mb-4 flex items-center gap-1"><i data-lucide="shield-check" class="text-emerald-500" style="width:14px;height:14px"></i> Credentials stored securely in Google Secret Manager</p>
+      <div class="space-y-3">
+        ${fields.map(([lbl,type])=>`<div><label class="block text-sm font-medium text-gray-700 mb-1">${lbl}</label><input type="${type}" value="${type==='password'?'••••••••':'demo-'+lbl.toLowerCase().replace(/ /g,'-')}" class="w-full px-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/40"></div>`).join('')}
+      </div>
+      <div class="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100">
+        <button onclick="showToast('Connection test passed ✓','success')" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">Test connection</button>
+        <button onclick="saveIntegration('${key}','${name}')" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded-lg text-sm">Save & connect</button>
+      </div>
+    </div>`);
+  icons();
+}
+function saveIntegration(key, name){
+  state.integrations[key]=true; closeModal(); showToast(name+' connected — first sync started','success');
+  if(location.hash.includes('integrations')) route();
+}
+
+/* ============================================================================
+   FINALYTICS WRAPPED  (full-screen slideshow)
+   ========================================================================== */
+let wrappedIdx = 0;
+function wrappedSlides(){
+  const d = ds(); const p = pnlDerived(d.pnl);
+  const slide = (bg, content) => ({bg, content});
+  return [
+    slide('from-indigo-600 via-purple-600 to-pink-600', `<div class="text-center"><i data-lucide="sparkles" class="mx-auto mb-4" style="width:44px;height:44px"></i><h1 class="text-4xl font-black mb-2 leading-tight">${state.year}<br>Wrapped</h1><p class="text-base text-white/80 font-semibold">${brand().name}</p><p class="text-sm text-white/60">${branch().name}</p><p class="mt-6 text-sm text-white/60">Let's relive your year →</p></div>`),
+    slide('from-emerald-500 to-teal-600', `<div class="text-center"><p class="text-base text-white/70 mb-2">You earned</p><h1 class="text-4xl font-black mb-3">${fmtCompact(d.revenue)}</h1><p class="text-sm text-white/80">in total revenue this year 🎉</p></div>`),
+    slide('from-blue-500 to-indigo-600', `<div class="text-center"><p class="text-base text-white/70 mb-2">That's</p><h1 class="text-4xl font-black mb-3">${fmtNum(d.transactions)}</h1><p class="text-sm text-white/80">orders served — ${fmtIDR(d.avgTicket)} each on average</p></div>`),
+    slide('from-orange-500 to-red-600', `<div class="text-center"><p class="text-base text-white/70 mb-2">Your best day was</p><h1 class="text-3xl font-black mb-3">${d.bestDay.date}</h1><p class="text-sm text-white/80">with ${fmtIDR(d.bestDay.amount)} in sales 🔥</p></div>`),
+    slide('from-purple-600 to-fuchsia-600', `<div class="text-center"><p class="text-base text-white/70 mb-3">Your busiest hour</p><h1 class="text-3xl font-black mb-5">6–8 PM</h1><div class="flex items-end justify-center gap-1 h-24">${d.hourly.map(v=>`<div class="w-1.5 bg-white/80 rounded-t" style="height:${Math.max(v/Math.max(...d.hourly)*100,4)}%"></div>`).join('')}</div></div>`),
+    slide('from-teal-500 to-cyan-600', `<div class="text-center"><p class="text-base text-white/70 mb-4">Your weekly rhythm</p><div class="flex items-end justify-center gap-2 h-28">${d.weekly.map((v,i)=>`<div class="flex flex-col items-center gap-1.5"><div class="w-6 bg-white/80 rounded-t" style="height:${v/Math.max(...d.weekly)*88}px"></div><span class="text-[10px] text-white/60">${DAYS[i]}</span></div>`).join('')}</div><p class="mt-5 text-sm text-white/80">Saturday is your power day 💪</p></div>`),
+    slide('from-amber-500 to-orange-600', `<div class="w-full"><p class="text-base text-white/70 mb-4 text-center">Your top products</p>${d.topProducts.slice(0,5).map((pp,i)=>`<div class="flex items-center gap-2.5 mb-1.5 text-left bg-white/10 rounded-lg px-2.5 py-2"><span class="text-lg font-black w-5 text-center">${i+1}</span><span class="flex-1 font-semibold text-sm truncate">${pp.name}</span></div>`).join('')}</div>`),
+    slide('from-pink-600 to-rose-600', `<div class="text-center"><p class="text-base text-white/70 mb-2">Your #1 category</p><h1 class="text-4xl font-black mb-3">${d.categories[0].name}</h1><p class="text-sm text-white/80">${fmtIDR(d.categories[0].rev)} in revenue ☕</p></div>`),
+    slide('from-green-500 to-emerald-600', `<div class="text-center"><p class="text-base text-white/70 mb-2">And you kept</p><h1 class="text-5xl font-black mb-3">${p.netMargin.toFixed(0)}%</h1><p class="text-sm text-white/80">net profit margin — ${fmtIDR(p.net)} take-home 💰</p></div>`),
+    slide('from-indigo-600 via-purple-600 to-pink-600', `<div class="text-center"><i data-lucide="party-popper" class="mx-auto mb-4" style="width:44px;height:44px"></i><h1 class="text-3xl font-black mb-2 leading-tight">That's a wrap,<br>${state.year}!</h1><p class="text-sm text-white/80 mb-6">Here's to an even bigger ${state.year+1}.</p><div class="flex flex-col gap-2"><button onclick="showToast('Wrapped image saved','success')" class="bg-white text-indigo-700 font-semibold px-4 py-2.5 rounded-lg text-sm">Download image</button><button onclick="closeWrapped()" class="bg-white/15 hover:bg-white/25 font-semibold px-4 py-2.5 rounded-lg text-sm">Back to app</button></div></div>`),
+  ];
+}
+// A single phone-style card on a static black gradient — only the card animates.
+function wrappedCard(s){
+  return `<div class="wrapped-card relative w-full aspect-[9/16] max-h-[80vh] rounded-[28px] shadow-2xl ring-1 ring-white/10 bg-gradient-to-br ${s.bg} text-white flex items-center justify-center px-6 py-9 overflow-hidden">
+    <div class="absolute top-4 left-4 text-[10px] bg-white/15 px-2.5 py-1 rounded-full">${state.year} · ${branch().name}</div>
+    <div class="w-full">${s.content}</div>
+  </div>`;
+}
+function wrappedShell(stageInner, controls){
+  return `<div class="fixed inset-0 z-50 flex items-center justify-center p-6 overflow-hidden"
+    style="background: radial-gradient(120% 90% at 50% 18%, #1b1b22 0%, #0a0a0d 55%, #000 100%);">
+    <button onclick="closeWrapped()" class="absolute top-5 right-5 z-20 p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg"><i data-lucide="x" style="width:22px;height:22px"></i></button>
+    <div id="wrapped-dots" class="absolute top-7 left-1/2 -translate-x-1/2 flex gap-1.5 z-20"></div>
+    <div id="wrapped-stage" class="relative w-full max-w-[330px] mx-auto">${stageInner}</div>
+    ${controls||''}
+  </div>`;
+}
+function pickerCard(){
+  return `<div class="wrapped-card relative w-full aspect-[9/16] max-h-[80vh] rounded-[28px] shadow-2xl ring-1 ring-white/10 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 text-white flex flex-col items-center justify-center text-center px-7 py-9">
+    <div class="w-14 h-14 bg-white/15 rounded-full flex items-center justify-center mb-4"><i data-lucide="sparkles" style="width:28px;height:28px"></i></div>
+    <h1 class="text-3xl font-black mb-1 leading-tight">Finalytics<br>Wrapped</h1>
+    <p class="text-white/70 text-sm mb-6">Select a period to see your recap</p>
+    <div class="grid grid-cols-3 gap-2 w-full mb-5">${DATA.years.map(y=>`<button onclick="state.year=${y};openWrapped()" class="py-2.5 rounded-xl font-bold text-sm ${y===state.year?'bg-white text-indigo-700':'bg-white/10 hover:bg-white/20'}">${y}</button>`).join('')}</div>
+    <button onclick="startWrapped()" class="w-full bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"><i data-lucide="play" style="width:18px;height:18px"></i> Start ${state.year} Wrapped</button>
+  </div>`;
+}
+function openWrapped(){
+  document.getElementById('wrapped-root').innerHTML = wrappedShell(pickerCard(), '');
+  icons();
+}
+function startWrapped(){
+  wrappedIdx = 0;
+  document.getElementById('wrapped-root').innerHTML = wrappedShell('', `
+    <button id="wnav-prev" onclick="wrappedNav(-1)" class="wnav left-3 sm:left-10"><i data-lucide="chevron-left" style="width:24px;height:24px"></i></button>
+    <button id="wnav-next" onclick="wrappedNav(1)" class="wnav right-3 sm:right-10"><i data-lucide="chevron-right" style="width:24px;height:24px"></i></button>`);
+  renderWrappedSlide();
+}
+function renderWrappedSlide(){
+  const slides = wrappedSlides();
+  const stage = document.getElementById('wrapped-stage');
+  if(stage) stage.innerHTML = wrappedCard(slides[wrappedIdx]);
+  const dots = document.getElementById('wrapped-dots');
+  if(dots) dots.innerHTML = slides.map((_,i)=>`<div class="h-1 rounded-full transition-all ${i===wrappedIdx?'w-7 bg-white':'w-3.5 bg-white/30'}"></div>`).join('');
+  const prev=document.getElementById('wnav-prev'), next=document.getElementById('wnav-next');
+  if(prev) prev.style.visibility = wrappedIdx>0 ? 'visible':'hidden';
+  if(next) next.style.visibility = wrappedIdx<slides.length-1 ? 'visible':'hidden';
+  icons();
+}
+function wrappedNav(dir){ wrappedIdx=Math.max(0,Math.min(wrappedSlides().length-1, wrappedIdx+dir)); renderWrappedSlide(); }
+function closeWrapped(){ document.getElementById('wrapped-root').innerHTML=''; if(!location.hash || location.hash==='#/wrapped') location.hash='#/dashboard'; }
+</script>
+
+<script>
+// boot
+window.addEventListener('DOMContentLoaded', ()=>{ icons(); });
+</script>
+</body>
+</html>
